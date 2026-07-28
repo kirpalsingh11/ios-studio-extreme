@@ -1,0 +1,40 @@
+{
+  "appId": "com.developer.iosstudioextreme",
+  "appName": "iOS Studio Extreme",
+  "webDir": "www",
+  "server": {
+    "androidScheme": "https",
+    "iosScheme": "capacitor",
+    "hostname": "studio.iosstudioextreme.local",
+    "cleartext": false
+  },
+  "backgroundColor": "#0B0F19",
+  "ios": {
+    "scheme": "App",
+    "contentInset": "always",
+    "backgroundColor": "#0B0F19",
+    "preferredContentMode": "mobile",
+    "scrollEnabled": true,
+    "limitsNavigationsToAppBoundDomains": false,
+    "handleApplicationNotifications": true
+  },
+  "plugins": {
+    "SplashScreen": {
+      "launchShowDuration": 1000,
+      "backgroundColor": "#0B0F19",
+      "showSpinner": false,
+      "iosSpinnerStyle": "small"
+    },
+    "StatusBar": {
+      "style": "DARK",
+      "backgroundColor": "#0B0F19",
+      "overlaysWebView": false
+    },
+    "Keyboard": {
+      "resize": "native",
+      "style": "DARK",
+      "resizeOnFullScreen": true
+    }
+  },
+  "cordova": {}
+}
