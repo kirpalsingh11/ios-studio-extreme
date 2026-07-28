@@ -1,58 +1,11 @@
 {
   "name": "ios-studio-extreme",
   "version": "1.0.0",
-  "description": "iOS Studio Extreme — a browser-based, Android Studio-density IDE optimized for full-screen iPad use. Three-column layout, live linter, Gemini AI copilot, real-time profiler, DOM inspector, global search & replace, and OTA packager. Compiles to an unsigned .ipa via GitHub Actions macos-14 runners.",
-  "author": "iOS Studio Extreme <developer@example.com>",
-  "license": "MIT",
-  "private": true,
-  "homepage": "https://github.com/developer/ios-studio-extreme",
-  "repository": {
-    "type": "git",
-    "url": "https://github.com/developer/ios-studio-extreme.git"
-  },
-  "keywords": [
-    "ios",
-    "ide",
-    "capacitor",
-    "gemini",
-    "github-actions",
-    "ipa",
-    "esign",
-    "sideload",
-    "cloud-build",
-    "no-mac",
-    "ipad"
-  ],
-  "scripts": {
-    "dev": "npx http-server www -p 8080 -c-1 -o /index.html",
-    "serve": "npx http-server www -p 8080 -c-1",
-    "build:web": "echo \"Web assets are static; no build step required.\" && exit 0",
-    "cap:add:ios": "npx cap add ios",
-    "cap:sync": "npx cap sync ios",
-    "cap:copy": "npx cap copy ios",
-    "cap:open:ios": "npx cap open ios",
-    "build:ios:local": "npm run cap:sync && xcodebuild -project ios/App/App.xcodeproj -scheme App -configuration Release -sdk iphoneos -archivePath build/App.xcarchive -destination 'generic/platform=iOS' CODE_SIGNING_ALLOWED=NO CODE_SIGNING_REQUIRED=NO archive",
-    "clean": "rm -rf build ios/App/build ios/App/DerivedData node_modules/.cache",
-    "lint": "echo \"No linter configured.\" && exit 0"
-  },
   "dependencies": {
-    "@capacitor/app": "^6.0.0",
-    "@capacitor/core": "^6.1.2",
-    "@capacitor/haptics": "^6.0.1",
-    "@capacitor/keyboard": "^6.0.2",
-    "@capacitor/preferences": "^6.0.2",
-    "@capacitor/status-bar": "^6.0.1"
+    "@capacitor/core": "^6.1.2"
   },
   "devDependencies": {
     "@capacitor/cli": "^6.1.2",
-    "@capacitor/ios": "^6.1.2",
-    "http-server": "^14.1.1"
-  },
-  "engines": {
-    "node": ">=18.0.0",
-    "npm": ">=9.0.0"
-  },
-  "capacitor": {
-    "configFile": "capacitor.config.json"
+    "@capacitor/ios": "^6.1.2"
   }
 }
