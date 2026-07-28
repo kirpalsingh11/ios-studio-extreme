@@ -17,7 +17,7 @@ jobs:
       - name: Setup Node
         uses: actions/setup-node@v4
         with:
-          node-version: "20"
+          node-version: "24"
 
       - name: Install dependencies
         run: npm install --no-audit --no-fund
@@ -29,6 +29,21 @@ jobs:
           fi
           npx cap copy ios
           npx cap sync ios
+
+      - name: Install CocoaPods dependencies
+        run: |
+          cd ios/App
+          if [ -f Podfile ]; then
+            if ! command -v pod >/dev/null 2>&1; then
+              echo "CocoaPods not found, installing..."
+              sudo gem install cocoapods --no-document
+            fi
+            # update specs to avoid stale repo errors, then install pods
+            pod repo update --silent || true
+            pod install --verbose
+          else
+            echo "No Podfile found; skipping pod install"
+          fi
 
       - name: Patch bundle ID
         run: |
@@ -48,7 +63,7 @@ jobs:
       - name: Build with Xcode
         run: |
           xcodebuild \
-            -project ios/App/App.xcodeproj \
+            -workspace ios/App/App.xcworkspace \
             -scheme App \
             -configuration Release \
             -sdk iphoneos \
