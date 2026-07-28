@@ -1,1 +1,79 @@
+name: iOS Build
 
+on:
+  push:
+    branches: [main, master]
+  workflow_dispatch:
+
+jobs:
+  build:
+    runs-on: macos-14
+    timeout-minutes: 30
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+
+      - name: Install dependencies
+        run: npm install --no-audit --no-fund
+
+      - name: Add iOS platform
+        run: |
+          if [ ! -d "ios" ]; then
+            npx cap add ios
+          fi
+          npx cap copy ios
+          npx cap sync ios
+
+      - name: Patch bundle ID
+        run: |
+          PBXPROJ="ios/App/App.xcodeproj/project.pbxproj"
+          sed -i '' "s|PRODUCT_BUNDLE_IDENTIFIER = [^;]*;|PRODUCT_BUNDLE_IDENTIFIER = com.developer.iosstudioextreme;|g" "$PBXPROJ"
+          sed -i '' '/CODE_SIGN_IDENTITY/d' "$PBXPROJ"
+          sed -i '' '/CODE_SIGN_STYLE/d' "$PBXPROJ"
+          sed -i '' '/DEVELOPMENT_TEAM/d' "$PBXPROJ"
+          sed -i '' '/PROVISIONING_PROFILE/d' "$PBXPROJ"
+
+          PLIST="ios/App/App/Info.plist"
+          /usr/libexec/PlistBuddy -c "Set :CFBundleDisplayName iOS Studio Extreme" "$PLIST"
+          /usr/libexec/PlistBuddy -c "Set :CFBundleIdentifier com.developer.iosstudioextreme" "$PLIST"
+          /usr/libexec/PlistBuddy -c "Set :CFBundleShortVersionString 1.0.0" "$PLIST"
+          /usr/libexec/PlistBuddy -c "Set :CFBundleVersion 1" "$PLIST"
+
+      - name: Build with Xcode
+        run: |
+          xcodebuild \
+            -project ios/App/App.xcodeproj \
+            -scheme App \
+            -configuration Release \
+            -sdk iphoneos \
+            -archivePath build/App.xcarchive \
+            -destination "generic/platform=iOS" \
+            CODE_SIGNING_ALLOWED=NO \
+            CODE_SIGNING_REQUIRED=NO \
+            CODE_SIGN_IDENTITY="" \
+            DEVELOPMENT_TEAM="" \
+            PROVISIONING_PROFILE="" \
+            ENABLE_BITCODE=NO \
+            IPHONEOS_DEPLOYMENT_TARGET=14.0 \
+            TARGETED_DEVICE_FAMILY="1,2" \
+            clean archive
+
+      - name: Package .ipa
+        run: |
+          APP=$(find build/App.xcarchive/Products/Applications -name "*.app" | head -1)
+          mkdir -p Payload
+          cp -R "$APP" Payload/
+          zip -qry iOSStudioExtreme.ipa Payload
+
+      - name: Upload artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: ios-app
+          path: iOSStudioExtreme.ipa
+          retention-days: 30
