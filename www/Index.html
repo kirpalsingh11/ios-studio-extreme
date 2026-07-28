@@ -1,1 +1,479 @@
 
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover, maximum-scale=5.0, user-scalable=yes" />
+  <meta name="apple-mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+  <meta name="apple-mobile-web-app-title" content="iOS Studio X" />
+  <meta name="theme-color" content="#0B0F19" />
+  <meta name="description" content="iOS Studio Extreme — a browser-based IDE with Android Studio-density tooling, optimized for full-screen iPad use. Three-column layout, live linter, Gemini copilot, real-time profiler, DOM inspector, global search & replace, OTA packager." />
+  <title>iOS Studio Extreme</title>
+  <link rel="manifest" href="./manifest.json" />
+  <link rel="stylesheet" href="./styles.css" />
+</head>
+<body data-accent="indigo" data-density="comfortable" data-anim="on">
+
+  <!-- ====================================================================
+       AMBIENT BACKGROUND
+       ==================================================================== -->
+  <div class="ambient" aria-hidden="true">
+    <div class="orb orb-a"></div>
+    <div class="orb orb-b"></div>
+    <div class="orb orb-c"></div>
+    <div class="matrix-rain" id="matrixRain"></div>
+    <div class="grid-overlay"></div>
+    <div class="scanline"></div>
+  </div>
+
+  <!-- ====================================================================
+       TOP BAR
+       ==================================================================== -->
+  <header class="topbar" role="banner">
+    <div class="topbar-left">
+      <button class="icon-btn" id="toggleLeftDrawer" aria-label="Toggle file tree" title="Toggle file tree">
+        <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M3 6h18M3 12h18M3 18h18"/></svg>
+      </button>
+      <div class="brand">
+        <div class="brand-mark" aria-hidden="true">
+          <svg viewBox="0 0 32 32" width="22" height="22" fill="none">
+            <defs>
+              <linearGradient id="brandGrad" x1="0" y1="0" x2="1" y2="1">
+                <stop offset="0%" stop-color="#6366f1" />
+                <stop offset="100%" stop-color="#22d3ee" />
+              </linearGradient>
+            </defs>
+            <rect x="3" y="3" width="26" height="26" rx="7" stroke="url(#brandGrad)" stroke-width="2" />
+            <path d="M11 11h10M11 16h7M11 21h10" stroke="url(#brandGrad)" stroke-width="2" stroke-linecap="round" />
+          </svg>
+        </div>
+        <div class="brand-text">
+          <span class="brand-name">iOS Studio</span>
+          <span class="brand-tag">EXTREME · v1.0.0</span>
+        </div>
+      </div>
+    </div>
+
+    <div class="topbar-center">
+      <div class="cmd-palette" id="cmdPalette" tabindex="0" role="button" aria-label="Open command palette">
+        <svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="11" cy="11" r="7"/><path d="M21 21l-4-4"/></svg>
+        <span class="cmd-palette-text">Search files, commands, symbols…</span>
+        <kbd>⌘K</kbd>
+      </div>
+    </div>
+
+    <div class="topbar-right">
+      <div class="profile-pill" id="profilePill" title="App identity (click to edit in OTA Packager)">
+        <span class="pp-name" id="ppName">iOS Studio Extreme</span>
+        <span class="pp-bundle" id="ppBundle">com.developer.iosstudioextreme</span>
+        <span class="pp-version" id="ppVersion">1.0.0</span>
+      </div>
+      <button class="icon-btn" id="searchBtn" title="Global search & replace (⌘⇧F)" aria-label="Global search">
+        <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="11" cy="11" r="7"/><path d="M21 21l-4-4"/></svg>
+      </button>
+      <button class="icon-btn" id="inspectorBtn" title="Layout inspector" aria-label="Layout inspector">
+        <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><rect x="3" y="3" width="18" height="18" rx="2"/><path d="M9 3v18M3 9h6"/></svg>
+      </button>
+      <button class="icon-btn" id="packagerBtn" title="OTA Packager" aria-label="OTA packager">
+        <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M21 16V8l-9-5-9 5v8l9 5 9-5z"/><path d="M3 8l9 5 9-5M12 13v8"/></svg>
+      </button>
+      <button class="icon-btn" id="geminiKeyBtn" title="Gemini API key" aria-label="Gemini API key">
+        <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.7 1.7 0 0 0 .3 1.8l.1.1a2 2 0 1 1-2.8 2.8l-.1-.1a1.7 1.7 0 0 0-1.8-.3 1.7 1.7 0 0 0-1 1.5V21a2 2 0 1 1-4 0v-.1a1.7 1.7 0 0 0-1-1.5 1.7 1.7 0 0 0-1.8.3l-.1.1a2 2 0 1 1-2.8-2.8l.1-.1a1.7 1.7 0 0 0 .3-1.8 1.7 1.7 0 0 0-1.5-1H3a2 2 0 1 1 0-4h.1a1.7 1.7 0 0 0 1.5-1 1.7 1.7 0 0 0-.3-1.8l-.1-.1a2 2 0 1 1 2.8-2.8l.1.1a1.7 1.7 0 0 0 1.8.3H9a1.7 1.7 0 0 0 1-1.5V3a2 2 0 1 1 4 0v.1a1.7 1.7 0 0 0 1 1.5 1.7 1.7 0 0 0 1.8-.3l.1-.1a2 2 0 1 1 2.8 2.8l-.1.1a1.7 1.7 0 0 0-.3 1.8V9a1.7 1.7 0 0 0 1.5 1H21a2 2 0 1 1 0 4h-.1a1.7 1.7 0 0 0-1.5 1z"/></svg>
+      </button>
+      <button class="icon-btn" id="toggleRightDrawer" aria-label="Toggle Gemini panel" title="Toggle Gemini panel">
+        <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>
+      </button>
+      <button class="cta-btn" id="compileBtn" title="Compile unsigned IPA (mock)">
+        <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M13 2L3 14h9l-1 8 10-12h-9z"/></svg>
+        <span>Compile IPA</span>
+      </button>
+    </div>
+  </header>
+
+  <!-- ====================================================================
+       IDE BODY — three-column split view
+       ==================================================================== -->
+  <div class="ide-body" id="ideBody">
+
+    <!-- ============== LEFT DRAWER — FILE MANAGER ============== -->
+    <aside class="drawer drawer-left" id="leftDrawer" role="navigation" aria-label="File manager">
+      <div class="drawer-head">
+        <span class="drawer-title">Explorer</span>
+        <div class="drawer-actions">
+          <button class="mini-btn" id="newFileBtn" title="New file" aria-label="New file">
+            <svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><path d="M14 2v6h6M12 18v-6M9 15h6"/></svg>
+          </button>
+          <button class="mini-btn" id="newFolderBtn" title="New folder" aria-label="New folder">
+            <svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"/><path d="M12 11v6M9 14h6"/></svg>
+          </button>
+          <button class="mini-btn" id="collapseAllBtn" title="Collapse all" aria-label="Collapse all">
+            <svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M7 13l5 5 5-5M7 6l5 5 5-5"/></svg>
+          </button>
+        </div>
+      </div>
+
+      <div class="search-card">
+        <svg viewBox="0 0 24 24" width="12" height="12" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="11" cy="11" r="7"/><path d="M21 21l-4-4"/></svg>
+        <input type="text" id="fileSearchInput" placeholder="Filter files…" autocomplete="off" />
+        <span class="search-count" id="fileSearchCount"></span>
+      </div>
+
+      <div class="tree-wrap" id="treeWrap">
+        <ul class="tree" id="treeRoot" role="tree"></ul>
+      </div>
+
+      <div class="drawer-foot">
+        <div class="status-line">
+          <span class="status-dot ok"></span>
+          <span class="status-text" id="fileCountStatus">0 files</span>
+        </div>
+      </div>
+    </aside>
+
+    <!-- ============== RESIZER LEFT ============== -->
+    <div class="resizer resizer-left" id="resizerLeft" aria-label="Resize left drawer"></div>
+
+    <!-- ============== CENTER — EDITOR ============== -->
+    <main class="center" id="centerPane" role="main">
+      <!-- Tab strip -->
+      <div class="tab-strip" id="tabStrip">
+        <div class="tab-list" id="tabList"></div>
+        <div class="tab-actions">
+          <button class="mini-btn" id="runLinterBtn" title="Run linter (⌘L)" aria-label="Run linter">
+            <svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M9 11l3 3L22 4M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/></svg>
+          </button>
+          <button class="mini-btn" id="saveFileBtn" title="Save (⌘S)" aria-label="Save file">
+            <svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"/><path d="M17 21v-8H7v8M7 3v5h8"/></svg>
+          </button>
+          <button class="mini-btn" id="formatBtn" title="Format" aria-label="Format code">
+            <svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M4 6h16M4 12h10M4 18h16"/></svg>
+          </button>
+        </div>
+      </div>
+
+      <!-- Editor surface (line numbers + textarea + highlight overlay) -->
+      <div class="editor-surface" id="editorSurface">
+        <div class="line-numbers" id="lineNumbers" aria-hidden="true"></div>
+        <div class="editor-canvas">
+          <pre class="highlight-layer" id="highlightLayer" aria-hidden="true"></pre>
+          <pre class="lint-layer" id="lintLayer" aria-hidden="true"></pre>
+          <textarea
+            id="editorTextarea"
+            class="editor-textarea"
+            spellcheck="false"
+            autocomplete="off"
+            autocapitalize="off"
+            autocorrect="off"
+            wrap="off"
+            placeholder="Open or create a file to begin editing…"></textarea>
+        </div>
+      </div>
+
+      <!-- Status bar -->
+      <div class="editor-statusbar">
+        <span class="sb-left">
+          <span class="sb-item" id="sbPath">—</span>
+          <span class="sb-sep">·</span>
+          <span class="sb-item" id="sbLang">plaintext</span>
+        </span>
+        <span class="sb-center">
+          <span class="sb-item" id="sbCursor">Ln 1, Col 1</span>
+          <span class="sb-sep">·</span>
+          <span class="sb-item" id="sbLines">0 lines</span>
+          <span class="sb-sep">·</span>
+          <span class="sb-item" id="sbChars">0 chars</span>
+        </span>
+        <span class="sb-right">
+          <span class="sb-item lint-status" id="sbLint">Lint: 0 issues</span>
+          <span class="sb-sep">·</span>
+          <span class="sb-item" id="sbSaved">unsaved</span>
+          <span class="sb-sep">·</span>
+          <span class="sb-item">UTF-8</span>
+          <span class="sb-sep">·</span>
+          <span class="sb-item">LF</span>
+        </span>
+      </div>
+    </main>
+
+    <!-- ============== RESIZER RIGHT ============== -->
+    <div class="resizer resizer-right" id="resizerRight" aria-label="Resize right drawer"></div>
+
+    <!-- ============== RIGHT DRAWER — GEMINI COPILOT ============== -->
+    <aside class="drawer drawer-right" id="rightDrawer" aria-label="Gemini AI copilot">
+      <div class="drawer-head">
+        <div class="gemini-head">
+          <span class="gemini-spark" aria-hidden="true">✦</span>
+          <span class="drawer-title">Gemini Copilot</span>
+          <span class="gemini-model" id="geminiModelLabel">gemini-1.5-flash</span>
+        </div>
+        <div class="drawer-actions">
+          <button class="mini-btn" id="geminiClearBtn" title="Clear chat" aria-label="Clear chat">
+            <svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M3 6h18M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/></svg>
+          </button>
+        </div>
+      </div>
+
+      <div class="gemini-history" id="geminiHistory" aria-live="polite">
+        <div class="gemini-empty">
+          <div class="gemini-empty-icon">✦</div>
+          <p>Ask Gemini to refactor, explain, generate, or fix code.</p>
+          <p class="gemini-empty-hint">Suggestions that include a code block will show <strong>Insert</strong> and <strong>Replace</strong> actions.</p>
+        </div>
+      </div>
+
+      <div class="gemini-context-row">
+        <label class="ctx-toggle">
+          <input type="checkbox" id="geminiSendContext" checked />
+          <span>Send active file as context</span>
+        </label>
+      </div>
+
+      <div class="gemini-input-row">
+        <textarea
+          id="geminiPrompt"
+          class="gemini-input"
+          placeholder="Ask Gemini anything…  (⏎ to send, ⇧⏎ for newline)"
+          rows="3"></textarea>
+        <button class="send-btn" id="geminiSendBtn" title="Send (⏎)" aria-label="Send to Gemini">
+          <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M22 2L11 13M22 2l-7 20-4-9-9-4 20-7z"/></svg>
+        </button>
+      </div>
+      <div class="gemini-hint-row">
+        <span id="geminiStatus">Ready</span>
+        <span class="gh-sep">·</span>
+        <span>Model: <strong id="geminiModelFoot">gemini-1.5-flash</strong></span>
+      </div>
+    </aside>
+  </div>
+
+  <!-- ====================================================================
+       BOTTOM SHEET — CONSOLE + PROFILER
+       ==================================================================== -->
+  <div class="bottom-sheet" id="bottomSheet">
+    <div class="bs-handle" id="bsHandle" aria-label="Resize bottom sheet"></div>
+    <div class="bs-tabs">
+      <button class="bs-tab active" data-bs-tab="console">Console</button>
+      <button class="bs-tab" data-bs-tab="problems">Problems <span class="bs-count" id="problemsCount">0</span></button>
+      <button class="bs-tab" data-bs-tab="terminal">Terminal</button>
+      <div class="bs-spacer"></div>
+      <div class="bs-actions">
+        <button class="chip-btn" id="bsClearBtn">Clear</button>
+        <button class="chip-btn" id="bsToggleProfiler" title="Pause/Resume profiler">⏸ Profiler</button>
+        <button class="chip-btn" id="bsCollapseBtn">▾ Collapse</button>
+      </div>
+    </div>
+
+    <div class="bs-body">
+      <!-- Console -->
+      <div class="bs-pane active" data-bs-pane="console">
+        <div class="console" id="consoleBody" tabindex="0"></div>
+      </div>
+
+      <!-- Problems -->
+      <div class="bs-pane" data-bs-pane="problems">
+        <ul class="problems-list" id="problemsList">
+          <li class="problems-empty">No problems detected. Run the linter to scan the active file.</li>
+        </ul>
+      </div>
+
+      <!-- Terminal -->
+      <div class="bs-pane" data-bs-pane="terminal">
+        <div class="terminal" id="terminalBody" tabindex="0"></div>
+        <div class="term-input-row">
+          <span class="term-prompt">studio@extreme:~$</span>
+          <input type="text" id="termInput" autocomplete="off" spellcheck="false" placeholder="Type a command (help, build, status, clear)…" />
+        </div>
+      </div>
+
+      <!-- Profiler canvas — always visible to the right -->
+      <div class="profiler-panel" id="profilerPanel">
+        <div class="profiler-head">
+          <span class="profiler-title">Live Profiler</span>
+          <div class="profiler-legend">
+            <span class="pl-item"><i class="pl-dot cpu"></i>CPU</span>
+            <span class="pl-item"><i class="pl-dot mem"></i>MEM</span>
+            <span class="pl-item"><i class="pl-dot lat"></i>LAT</span>
+          </div>
+        </div>
+        <canvas id="profilerCanvas" width="600" height="180"></canvas>
+        <div class="profiler-stats">
+          <div class="ps-item"><span class="ps-label">CPU</span><span class="ps-value" id="psCpu">0%</span></div>
+          <div class="ps-item"><span class="ps-label">MEM</span><span class="ps-value" id="psMem">0 MB</span></div>
+          <div class="ps-item"><span class="ps-label">LAT</span><span class="ps-value" id="psLat">0 ms</span></div>
+          <div class="ps-item"><span class="ps-label">FPS</span><span class="ps-value" id="psFps">0</span></div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ====================================================================
+       MODALS
+       ==================================================================== -->
+
+  <!-- Command palette modal -->
+  <div class="modal-overlay" id="cmdModal" aria-hidden="true">
+    <div class="modal modal-cmd" role="dialog" aria-label="Command palette">
+      <div class="cmd-input-wrap">
+        <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="11" cy="11" r="7"/><path d="M21 21l-4-4"/></svg>
+        <input type="text" id="cmdInput" placeholder="Type a command or search files…" autocomplete="off" />
+        <kbd>esc</kbd>
+      </div>
+      <ul class="cmd-list" id="cmdList"></ul>
+    </div>
+  </div>
+
+  <!-- Global search & replace modal -->
+  <div class="modal-overlay" id="searchModal" aria-hidden="true">
+    <div class="modal modal-search" role="dialog" aria-label="Global search and replace">
+      <div class="modal-head">
+        <h3>Global Search &amp; Replace</h3>
+        <button class="icon-btn modal-close" data-close="searchModal" aria-label="Close">×</button>
+      </div>
+      <div class="search-form">
+        <input type="text" id="gsFind" placeholder="Find in files…" autocomplete="off" />
+        <input type="text" id="gsReplace" placeholder="Replace with…" autocomplete="off" />
+        <label class="inline-check"><input type="checkbox" id="gsRegex" /> Regex</label>
+        <label class="inline-check"><input type="checkbox" id="gsCase" /> Case-sensitive</label>
+        <button class="primary-btn" id="gsRunBtn">Search</button>
+        <button class="ghost-btn" id="gsReplaceAllBtn">Replace all</button>
+      </div>
+      <div class="search-summary" id="gsSummary"></div>
+      <ul class="search-results" id="gsResults"></ul>
+    </div>
+  </div>
+
+  <!-- Layout inspector modal -->
+  <div class="modal-overlay" id="inspectorModal" aria-hidden="true">
+    <div class="modal modal-inspector" role="dialog" aria-label="Layout inspector">
+      <div class="modal-head">
+        <h3>Layout Inspector</h3>
+        <button class="icon-btn modal-close" data-close="inspectorModal" aria-label="Close">×</button>
+      </div>
+      <div class="inspector-body">
+        <div class="inspector-tree-wrap">
+          <div class="inspector-section-title">DOM Tree</div>
+          <ul class="inspector-tree" id="inspectorTree"></ul>
+        </div>
+        <div class="inspector-props-wrap">
+          <div class="inspector-section-title">Properties</div>
+          <div class="inspector-props" id="inspectorProps">
+            <p class="inspector-empty">Select a node from the tree to inspect its properties.</p>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- OTA Packager modal -->
+  <div class="modal-overlay" id="packagerModal" aria-hidden="true">
+    <div class="modal modal-packager" role="dialog" aria-label="OTA packager">
+      <div class="modal-head">
+        <h3>OTA Packager — App Identity</h3>
+        <button class="icon-btn modal-close" data-close="packagerModal" aria-label="Close">×</button>
+      </div>
+      <div class="pkg-body">
+        <div class="pkg-grid">
+          <label class="field">
+            <span>App Name</span>
+            <input type="text" id="pkgAppName" value="iOS Studio Extreme" />
+          </label>
+          <label class="field">
+            <span>Bundle Identifier</span>
+            <input type="text" id="pkgBundleId" value="com.developer.iosstudioextreme" />
+          </label>
+          <label class="field">
+            <span>Version</span>
+            <input type="text" id="pkgVersion" value="1.0.0" />
+          </label>
+          <label class="field">
+            <span>Build Number</span>
+            <input type="number" id="pkgBuild" value="1" min="1" />
+          </label>
+          <label class="field">
+            <span>iOS Deployment Target</span>
+            <select id="pkgTarget">
+              <option value="14.0">iOS 14.0</option>
+              <option value="15.0">iOS 15.0</option>
+              <option value="16.0" selected>iOS 16.0</option>
+              <option value="17.0">iOS 17.0</option>
+            </select>
+          </label>
+          <label class="field">
+            <span>Targeted Devices</span>
+            <select id="pkgDevices">
+              <option value="1,2" selected>iPhone + iPad</option>
+              <option value="1">iPhone only</option>
+              <option value="2">iPad only</option>
+            </select>
+          </label>
+        </div>
+        <div class="pkg-preview">
+          <div class="pkg-preview-title">Generated Info.plist snippet</div>
+          <pre class="pkg-preview-code" id="pkgPreview"></pre>
+        </div>
+        <div class="pkg-actions">
+          <button class="primary-btn" id="pkgSaveBtn">Save &amp; Apply</button>
+          <button class="ghost-btn" id="pkgResetBtn">Reset Defaults</button>
+          <button class="ghost-btn" id="pkgExportBtn">Export capacitor.config.json</button>
+        </div>
+        <div class="pkg-note">
+          These values are written into <code>capacitor.config.json</code> and are also injected at build time by the GitHub Actions workflow via <code>sed</code> (pbxproj) and <code>PlistBuddy</code> (Info.plist).
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Gemini API key modal -->
+  <div class="modal-overlay" id="geminiKeyModal" aria-hidden="true">
+    <div class="modal modal-key" role="dialog" aria-label="Gemini API key">
+      <div class="modal-head">
+        <h3>Gemini API Configuration</h3>
+        <button class="icon-btn modal-close" data-close="geminiKeyModal" aria-label="Close">×</button>
+      </div>
+      <div class="key-body">
+        <p class="key-help">
+          Paste your Google Gemini API key below. The key is stored only in your browser's <code>localStorage</code> and is sent directly to <code>generativelanguage.googleapis.com</code>. Get a free key at <a href="https://aistudio.google.com/app/apikey" target="_blank" rel="noopener">aistudio.google.com/app/apikey</a>.
+        </p>
+        <label class="field">
+          <span>API Key</span>
+          <input type="password" id="geminiKeyInput" placeholder="AIza…" autocomplete="off" />
+        </label>
+        <label class="field">
+          <span>Model</span>
+          <select id="geminiModelSelect">
+            <option value="gemini-1.5-flash" selected>gemini-1.5-flash (fast, free tier)</option>
+            <option value="gemini-1.5-flash-8b">gemini-1.5-flash-8b (fastest)</option>
+            <option value="gemini-1.5-pro">gemini-1.5-pro (highest quality)</option>
+            <option value="gemini-pro">gemini-pro (legacy)</option>
+          </select>
+        </label>
+        <label class="field">
+          <span>System instruction (optional)</span>
+          <textarea id="geminiSystemInput" rows="3" placeholder="You are an expert iOS engineer. Reply with concise, production-ready code."></textarea>
+        </label>
+        <div class="key-actions">
+          <button class="primary-btn" id="geminiKeySaveBtn">Save</button>
+          <button class="ghost-btn" id="geminiKeyTestBtn">Test connection</button>
+          <button class="ghost-btn" id="geminiKeyClearBtn">Clear</button>
+        </div>
+        <div class="key-status" id="geminiKeyStatus"></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Context menu (file tree) -->
+  <div class="context-menu" id="ctxMenu" aria-hidden="true">
+    <button class="ctx-item" data-ctx="open">Open</button>
+    <button class="ctx-item" data-ctx="rename">Rename</button>
+    <button class="ctx-item" data-ctx="duplicate">Duplicate</button>
+    <button class="ctx-item" data-ctx="delete">Delete</button>
+  </div>
+
+  <!-- Toast stack -->
+  <div class="toast-stack" id="toastStack" aria-live="polite"></div>
+
+  <!-- App logic -->
+  <script src="./app.js" defer></script>
+</body>
+</html>
