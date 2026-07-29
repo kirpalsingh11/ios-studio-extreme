@@ -24,59 +24,55 @@ jobs:
       - name: Install dependencies
         run: npm install --no-audit --no-fund
 
-      - name: Create www/ from root files (auto, no manual folder needed)
+      - name: Prepare www folder
         run: |
           mkdir -p www
-          cp index.html www/ 2>/dev/null || true
-          cp app.js www/ 2>/dev/null || true
-          cp styles.css www/ 2>/dev/null || true
-          cp manifest.json www/ 2>/dev/null || true
-          echo "=== www/ contents ==="
+          for f in index.html app.js styles.css manifest.json; do
+            if [ -f "$f" ]; then
+              cp "$f" "www/$f"
+            fi
+          done
           ls -la www/
-          if [ ! -f "www/index.html" ]; then
-            echo "ERROR: index.html not found in repo root"
-            exit 1
-          fi
+          test -f www/index.html || { echo "ERROR: index.html missing"; exit 1; }
 
       - name: Add iOS platform
         run: |
-          if [ ! -d "ios" ]; then
-            npx cap add ios
-          fi
+          npx cap add ios || npx cap sync ios
           npx cap copy ios
           npx cap sync ios
 
-            - name: Set app icon (if provided)
+      - name: Set app icon
         run: |
           if [ -f "app-icon.png" ]; then
             ICON_DIR="ios/App/App/Assets.xcassets/AppIcon.appiconset"
             mkdir -p "$ICON_DIR"
-            # Write Contents.json safely without using an indented heredoc which can break the shell
-            printf '%s\n' '{' '  "images": [' '    {"size":"1024x1024","idiom":"universal","platform":"ios","filename":"icon-1024.png"}' '  ],' '  "info": {"version":1,"author":"xcode"}' '}' > "$ICON_DIR/Contents.json"
+            cat > "$ICON_DIR/Contents.json" << 'ICONEND'
+          {"images":[{"size":"1024x1024","idiom":"universal","platform":"ios","filename":"icon-1024.png"}],"info":{"version":1,"author":"xcode"}}
+          ICONEND
             sips -z 1024 1024 app-icon.png --out "$ICON_DIR/icon-1024.png"
-            echo "✓ App icon set from app-icon.png"
+            echo "App icon set"
           else
-            echo "No app-icon.png found — using default Capacitor icon"
+            echo "No app-icon.png - using default"
           fi
 
-      - name: Patch bundle ID and app name
+      - name: Patch project config
         run: |
           PBXPROJ="ios/App/App.xcodeproj/project.pbxproj"
-          sed -i '' "s|PRODUCT_BUNDLE_IDENTIFIER = [^;]*;|PRODUCT_BUNDLE_IDENTIFIER = com.developer.iosstudioextreme;|g" "$PBXPROJ"
-          sed -i '' '/CODE_SIGN_IDENTITY/d' "$PBXPROJ"
-          sed -i '' '/CODE_SIGN_STYLE/d' "$PBXPROJ"
-          sed -i '' '/DEVELOPMENT_TEAM/d' "$PBXPROJ"
-          sed -i '' '/PROVISIONING_PROFILE/d' "$PBXPROJ"
-
           PLIST="ios/App/App/Info.plist"
+          
+          sed -i '' "s|PRODUCT_BUNDLE_IDENTIFIER = [^;]*;|PRODUCT_BUNDLE_IDENTIFIER = com.developer.iosstudioextreme;|g" "$PBXPROJ"
+          sed -i '' "/CODE_SIGN_IDENTITY/d" "$PBXPROJ"
+          sed -i '' "/CODE_SIGN_STYLE/d" "$PBXPROJ"
+          sed -i '' "/DEVELOPMENT_TEAM/d" "$PBXPROJ"
+          sed -i '' "/PROVISIONING_PROFILE/d" "$PBXPROJ"
+          
           /usr/libexec/PlistBuddy -c "Set :CFBundleDisplayName iOS Studio Extreme" "$PLIST"
           /usr/libexec/PlistBuddy -c "Set :CFBundleIdentifier com.developer.iosstudioextreme" "$PLIST"
           /usr/libexec/PlistBuddy -c "Set :CFBundleShortVersionString 1.0.0" "$PLIST"
           /usr/libexec/PlistBuddy -c "Set :CFBundleVersion 1" "$PLIST"
 
-      - name: Build with Xcode
+      - name: Build archive
         run: |
-          set -e
           xcodebuild \
             -project ios/App/App.xcodeproj \
             -scheme App \
@@ -92,36 +88,25 @@ jobs:
             ENABLE_BITCODE=NO \
             IPHONEOS_DEPLOYMENT_TARGET=14.0 \
             TARGETED_DEVICE_FAMILY="1,2" \
-            clean archive \
-            2>&1 | tee build.log
+            clean archive 2>&1 | tee build.log
+          
+          test -d build/App.xcarchive || { echo "BUILD FAILED"; grep "error:" build.log | head -20; exit 1; }
 
-          if [ ! -d "build/App.xcarchive" ]; then
-            echo "=== BUILD FAILED ==="
-            grep "error:" build.log | head -20
-            exit 1
-          fi
-          echo "✓ Archive built successfully"
-
-      - name: Verify real binary
+      - name: Verify binary
         run: |
-          APP=$(find build/App.xcarchive/Products/Applications -name "*.app" | head -1)
+          APP=$(find build/App.xcarchive/Products/Applications -name "*.app" -maxdepth 1 | head -1)
           BIN="$APP/App"
-          echo "Binary type: $(file "$BIN")"
-          echo "Binary size: $(stat -f%z "$BIN") bytes"
-          if [ $(stat -f%z "$BIN") -lt 10000 ]; then
-            echo "ERROR: Binary too small — not a real app"
-            exit 1
-          fi
-          echo "✓ Real Mach-O binary confirmed"
+          SIZE=$(stat -f%z "$BIN")
+          echo "Binary: $BIN ($SIZE bytes)"
+          test "$SIZE" -gt 10000 || { echo "Binary too small"; exit 1; }
+          echo "Real binary confirmed"
 
-      - name: Package .ipa
+      - name: Package IPA
         run: |
-          APP=$(find build/App.xcarchive/Products/Applications -name "*.app" | head -1)
+          APP=$(find build/App.xcarchive/Products/Applications -name "*.app" -maxdepth 1 | head -1)
           mkdir -p Payload
           cp -R "$APP" Payload/
           zip -qry iOSStudioExtreme.ipa Payload
-          shasum -a 256 iOSStudioExtreme.ipa > iOSStudioExtreme.ipa.sha256
-          echo "✓ .ipa packaged:"
           ls -la iOSStudioExtreme.ipa
 
       - name: Upload artifact
@@ -131,7 +116,7 @@ jobs:
           path: iOSStudioExtreme.ipa
           retention-days: 30
 
-      - name: Create GitHub Release (public download)
+      - name: Create release
         uses: softprops/action-gh-release@v2
         with:
           files: iOSStudioExtreme.ipa
@@ -140,13 +125,13 @@ jobs:
           body: |
             Real compiled iOS app.
 
-            **Download:** `iOSStudioExtreme.ipa`
+            Download: iOSStudioExtreme.ipa
 
-            **To install:**
+            Install:
             1. Download the .ipa
             2. Import into ESign
-            3. Sign with your free Apple ID
-            4. Install → Trust → Launch
+            3. Sign with free Apple ID
+            4. Install and Trust
           draft: false
           prerelease: false
         env:
