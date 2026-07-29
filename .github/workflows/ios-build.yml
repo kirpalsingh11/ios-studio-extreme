@@ -46,19 +46,13 @@ jobs:
           npx cap copy ios
           npx cap sync ios
 
-      - name: Set app icon (if provided)
+            - name: Set app icon (if provided)
         run: |
           if [ -f "app-icon.png" ]; then
             ICON_DIR="ios/App/App/Assets.xcassets/AppIcon.appiconset"
             mkdir -p "$ICON_DIR"
-            cat > "$ICON_DIR/Contents.json" <<'EOF'
-            {
-              "images": [
-                {"size":"1024x1024","idiom":"universal","platform":"ios","filename":"icon-1024.png"}
-              ],
-              "info": {"version":1,"author":"xcode"}
-            }
-            EOF
+            # Write Contents.json safely without using an indented heredoc which can break the shell
+            printf '%s\n' '{' '  "images": [' '    {"size":"1024x1024","idiom":"universal","platform":"ios","filename":"icon-1024.png"}' '  ],' '  "info": {"version":1,"author":"xcode"}' '}' > "$ICON_DIR/Contents.json"
             sips -z 1024 1024 app-icon.png --out "$ICON_DIR/icon-1024.png"
             echo "✓ App icon set from app-icon.png"
           else
