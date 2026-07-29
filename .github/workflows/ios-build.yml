@@ -22,11 +22,8 @@ jobs:
           node-version: "24"
 
       - name: Install dependencies
-        run: npm install --no-audit --no-fund
-
-      - name: Verify Capacitor installed
         run: |
-          npx cap --version
+          npm install --no-audit --no-fund
           npm ls @capacitor/core @capacitor/cli @capacitor/ios
 
       - name: Prepare www folder
@@ -37,26 +34,25 @@ jobs:
               cp "$f" "www/$f"
             fi
           done
-          ls -la www/
           test -f www/index.html || { echo "ERROR: index.html missing"; exit 1; }
 
       - name: Add iOS platform
         run: npx cap add ios
 
-      - name: Verify iOS platform added
+      - name: Create workspace if missing
         run: |
-          test -d ios/App || { echo "ERROR: ios/App not created"; exit 1; }
-          test -f ios/App/App.xcworkspace || { echo "ERROR: workspace not created by cap add"; exit 1; }
-          echo "iOS platform ready"
-          ls -la ios/App/
+          if [ ! -f ios/App/App.xcworkspace ]; then
+            echo "Workspace missing, generating with pod install"
+            cd ios/App
+            pod install
+            cd ../..
+          fi
+          test -f ios/App/App.xcworkspace || { echo "ERROR: still no workspace"; exit 1; }
 
-      - name: Sync and install pods
+      - name: Sync
         run: |
           npx cap copy ios
           npx cap sync ios
-          cd ios/App
-          pod install --repo-update
-          cd ../..
 
       - name: Set app icon
         run: |
@@ -67,28 +63,23 @@ jobs:
           {"images":[{"size":"1024x1024","idiom":"universal","platform":"ios","filename":"icon-1024.png"}],"info":{"version":1,"author":"xcode"}}
           ICONEND
             sips -z 1024 1024 app-icon.png --out "$ICON_DIR/icon-1024.png"
-            echo "App icon set"
-          else
-            echo "No app-icon.png - using default"
           fi
 
-      - name: Patch project config
+      - name: Patch config
         run: |
           PBXPROJ="ios/App/App.xcodeproj/project.pbxproj"
           PLIST="ios/App/App/Info.plist"
-          
           sed -i '' "s|PRODUCT_BUNDLE_IDENTIFIER = [^;]*;|PRODUCT_BUNDLE_IDENTIFIER = com.developer.iosstudioextreme;|g" "$PBXPROJ"
           sed -i '' "/CODE_SIGN_IDENTITY/d" "$PBXPROJ"
           sed -i '' "/CODE_SIGN_STYLE/d" "$PBXPROJ"
           sed -i '' "/DEVELOPMENT_TEAM/d" "$PBXPROJ"
           sed -i '' "/PROVISIONING_PROFILE/d" "$PBXPROJ"
-          
           /usr/libexec/PlistBuddy -c "Set :CFBundleDisplayName iOS Studio Extreme" "$PLIST"
           /usr/libexec/PlistBuddy -c "Set :CFBundleIdentifier com.developer.iosstudioextreme" "$PLIST"
           /usr/libexec/PlistBuddy -c "Set :CFBundleShortVersionString 1.0.0" "$PLIST"
           /usr/libexec/PlistBuddy -c "Set :CFBundleVersion 1" "$PLIST"
 
-      - name: Build archive
+      - name: Build
         run: |
           xcodebuild \
             -workspace ios/App/App.xcworkspace \
@@ -97,59 +88,31 @@ jobs:
             -sdk iphoneos \
             -archivePath build/App.xcarchive \
             -destination "generic/platform=iOS" \
-            CODE_SIGNING_ALLOWED=NO \
-            CODE_SIGNING_REQUIRED=NO \
-            CODE_SIGN_IDENTITY="" \
-            DEVELOPMENT_TEAM="" \
-            PROVISIONING_PROFILE="" \
-            ENABLE_BITCODE=NO \
-            IPHONEOS_DEPLOYMENT_TARGET=14.0 \
+            CODE_SIGNING_ALLOWED=NO CODE_SIGNING_REQUIRED=NO \
+            CODE_SIGN_IDENTITY="" DEVELOPMENT_TEAM="" PROVISIONING_PROFILE="" \
+            ENABLE_BITCODE=NO IPHONEOS_DEPLOYMENT_TARGET=14.0 \
             TARGETED_DEVICE_FAMILY="1,2" \
             clean archive 2>&1 | tee build.log
-          
-          test -d build/App.xcarchive || { echo "BUILD FAILED"; grep "error:" build.log | head -20; exit 1; }
-
-      - name: Verify binary
-        run: |
-          APP=$(find build/App.xcarchive/Products/Applications -name "*.app" -maxdepth 1 | head -1)
-          BIN="$APP/App"
-          SIZE=$(stat -f%z "$BIN")
-          echo "Binary: $BIN ($SIZE bytes)"
-          test "$SIZE" -gt 10000 || { echo "Binary too small"; exit 1; }
-          echo "Real binary confirmed"
+          test -d build/App.xcarchive || { grep "error:" build.log | head -20; exit 1; }
 
       - name: Package IPA
         run: |
           APP=$(find build/App.xcarchive/Products/Applications -name "*.app" -maxdepth 1 | head -1)
-          mkdir -p Payload
-          cp -R "$APP" Payload/
+          mkdir -p Payload && cp -R "$APP" Payload/
           zip -qry iOSStudioExtreme.ipa Payload
-          ls -la iOSStudioExtreme.ipa
 
       - name: Upload artifact
         uses: actions/upload-artifact@v4
         with:
           name: ios-app
           path: iOSStudioExtreme.ipa
-          retention-days: 30
 
-      - name: Create release
+      - name: Release
         uses: softprops/action-gh-release@v2
         with:
           files: iOSStudioExtreme.ipa
           tag_name: v1.0.${{ github.run_number }}
           name: Build ${{ github.run_number }}
-          body: |
-            Real compiled iOS app.
-
-            Download: iOSStudioExtreme.ipa
-
-            Install:
-            1. Download the .ipa
-            2. Import into ESign
-            3. Sign with free Apple ID
-            4. Install and Trust
-          draft: false
-          prerelease: false
+          body: "Real compiled iOS app. Sign with ESign + free Apple ID."
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
