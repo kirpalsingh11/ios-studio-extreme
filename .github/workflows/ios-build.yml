@@ -35,17 +35,16 @@ jobs:
           ls -la www/
           test -f www/index.html || { echo "ERROR: index.html missing"; exit 1; }
 
-      - name: Add iOS platform
+      - name: Add iOS platform and install pods
         run: |
-          npx cap add ios || npx cap sync ios
+          npx cap add ios || true
           npx cap copy ios
           npx cap sync ios
-
-      - name: Install CocoaPods
-        run: |
           cd ios/App
           pod install --repo-update
           cd ../..
+          test -f ios/App/App.xcworkspace || { echo "ERROR: workspace not created"; exit 1; }
+          echo "Workspace ready"
 
       - name: Set app icon
         run: |
@@ -80,7 +79,7 @@ jobs:
       - name: Build archive
         run: |
           xcodebuild \
-            -project ios/App/App.xcodeproj \
+            -workspace ios/App/App.xcworkspace \
             -scheme App \
             -configuration Release \
             -sdk iphoneos \
