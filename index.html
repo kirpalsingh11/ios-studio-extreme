@@ -1,0 +1,208 @@
+<!DOCTYPE html>
+<html lang="en" data-accent="indigo">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1.0,viewport-fit=cover">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="theme-color" content="#1e1e1e">
+<title>iOS Studio</title>
+<link rel="stylesheet" href="styles.css">
+</head>
+<body>
+<script>
+// ═══ ANTI-DEVTOOLS PROTECTION (doesn't block input fields) ═══
+(function() {
+  'use strict';
+
+  // 1. Block ALL keyboard shortcuts to devtools ONLY
+  document.addEventListener('keydown', function(e) {
+    if (e.key === 'F12') { e.preventDefault(); return false; }
+    if (e.ctrlKey && e.shiftKey && ['I','J','C'].includes(e.key.toUpperCase())) { e.preventDefault(); return false; }
+    if (e.ctrlKey && e.key === 'u') { e.preventDefault(); return false; }
+    if (e.metaKey && e.altKey && ['I','J','C'].includes(e.key.toUpperCase())) { e.preventDefault(); return false; }
+    if (e.metaKey && e.shiftKey && e.key.toUpperCase() === 'C') { e.preventDefault(); return false; }
+  }, true);
+
+  // 2. Block right-click EXCEPT on tree items, editor, and input fields
+  document.addEventListener('contextmenu', function(e) {
+    if (!e.target.closest('.tree-item') && !e.target.closest('#editor') && !e.target.closest('input') && !e.target.closest('textarea') && !e.target.closest('select')) {
+      e.preventDefault();
+    }
+  }, true);
+
+  // 3. DevTools detection — redirect on open
+  let blocked = false;
+  function checkDevTools() {
+    if (blocked) return;
+    const t1 = performance.now();
+    debugger;
+    const t2 = performance.now();
+    const sizeDiff = (window.outerWidth - window.innerWidth > 200) || (window.outerHeight - window.innerHeight > 200);
+    if (t2 - t1 > 100 || sizeDiff) {
+      blocked = true;
+      document.documentElement.innerHTML = '<div style="display:flex;align-items:center;justify-content:center;height:100vh;background:#1e1e1e;color:#666;font-family:system-ui;font-size:14px">DevTools detected. Page protected.</div>';
+      window.stop();
+    }
+  }
+  setInterval(checkDevTools, 1000);
+
+  // 4. Clear console periodically
+  setInterval(() => { console.clear(); }, 3000);
+
+  // 5. Block view-source
+  if (location.protocol === 'view-source:') window.location.href = 'about:blank';
+
+})();
+</script>
+
+
+
+
+<div class="activity-bar" id="activityBar"></div>
+<div class="side-bar" id="sideBar"><div class="sb-view active" id="sbView"></div></div>
+<div class="resizer-side" id="resizerSide"></div>
+
+<main class="editor-area">
+  <div class="breadcrumb-bar" id="breadcrumb"></div>
+  <div class="tab-strip">
+    <div class="tab-list" id="tabList"></div>
+    <div class="tab-actions">
+      <button class="tab-action" id="saveBtn">💾</button>
+      <button class="tab-action" id="lintBtn">✓</button>
+      <button class="tab-action" id="fmtBtn">≡</button>
+      <button class="tab-action" id="prevBtn">👁</button>
+    </div>
+  </div>
+  <div class="find-bar" id="findBar">
+    <input type="text" id="findInput" placeholder="Find...">
+    <span id="findCount"></span>
+    <button class="find-btn" id="findPrevB">↑</button>
+    <button class="find-btn" id="findNextB">↓</button>
+    <button class="find-btn" id="findCloseB">×</button>
+  </div>
+  <div class="editor-surface">
+    <div class="line-numbers" id="lineNums"></div>
+    <div class="editor-canvas">
+      <pre class="highlight-layer" id="hlLayer"></pre>
+      <textarea id="editor" class="editor-textarea" spellcheck="false" wrap="off" placeholder="Open a file..."></textarea>
+    </div>
+    <div class="preview-pane" id="prevPane">
+      <div class="prev-head"><span>Preview</span><button id="prevClose">×</button></div>
+      <iframe id="prevFrame" sandbox="allow-same-origin allow-scripts"></iframe>
+    </div>
+  </div>
+</main>
+
+<div class="panel-resizer" id="panelResizer"></div>
+<div class="panel" id="panel">
+  <div class="panel-tabs">
+    <button class="pt active" data-pt="console">Console</button>
+    <button class="pt" data-pt="term">Terminal</button>
+    <div style="flex:1"></div>
+    <button class="pt" id="panelClear">Clear</button>
+    <button class="pt" id="panelCollapse">▾</button>
+  </div>
+  <div class="panel-body">
+    <div class="pp active" data-pp="console"><div class="console" id="console"></div></div>
+    <div class="pp" data-pp="term">
+      <div class="terminal" id="terminal"></div>
+      <div class="term-input"><span>$</span><input type="text" id="termIn" placeholder="help, build, ipa..."></div>
+    </div>
+    <div class="profiler-panel">
+      <div class="prof-head">PROFILER</div>
+      <canvas id="profCanvas" width="300" height="160"></canvas>
+      <div class="prof-stats">
+        <span>CPU: <b id="psC">0%</b></span>
+        <span>MEM: <b id="psM">0</b></span>
+        <span>FPS: <b id="psF">0</b></span>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="status-bar">
+  <span id="sbLint">Lint: 0</span>
+  <span id="sbCursor">Ln 1, Col 1</span>
+  <span id="sbLang">plaintext</span>
+  <span id="sbFile">—</span>
+</div>
+
+<div class="context-menu" id="ctxMenu">
+  <button class="ctx-item" data-ctx="open">Open</button>
+  <button class="ctx-item" data-ctx="rename">Rename</button>
+  <button class="ctx-item" data-ctx="delete">Delete</button>
+</div>
+
+<div class="modal-overlay" id="cmdModal">
+  <div class="modal"><div class="cmd-wrap"><input type="text" id="cmdIn" placeholder="Search commands..."></div><ul id="cmdList"></ul></div>
+</div>
+
+<div class="modal-overlay" id="settingsModal">
+  <div class="modal" style="max-width:500px">
+    <div class="modal-head"><h3>Settings</h3><button class="modal-close" data-close="settingsModal">×</button></div>
+    <div style="padding:16px;overflow-y:auto;max-height:70vh">
+      <div class="set-group"><div class="set-title">GITHUB (for real .ipa builds)</div>
+        <label>Repo (user/repo)<input type="text" id="setRepo" placeholder="user/repo" style="width:100%"></label>
+        <label>Token (ghp_...)<input type="password" id="setToken" placeholder="ghp_..." style="width:100%"></label>
+        <button class="btn" id="testTokenBtn" style="margin-top:8px">Test Connection</button>
+        <div id="tokenStatus" style="font-size:11px;margin-top:4px"></div>
+      </div>
+      <div class="set-group"><div class="set-title">AI</div>
+        <label>Provider<select id="setAIProv" style="width:100%"><option value="builtin">Built-in (free, offline)</option><option value="gemini">Gemini (free key)</option><option value="openai">OpenAI-compatible</option></select></label>
+        <label>API Key<input type="password" id="setAIKey" placeholder="AIza..." style="width:100%"></label>
+        <label>Model<select id="setAIModel" style="width:100%"><option>builtin</option><option>gemini-2.0-flash</option><option>gemini-1.5-flash</option><option>gemini-1.5-pro</option><option>gpt-4o</option><option>gpt-4o-mini</option></select></label>
+      </div>
+      <div class="set-group"><div class="set-title">EDITOR</div>
+        <label>Font Size <input type="number" id="setFS" value="13" min="10" max="24" style="width:60px"></label>
+        <label>Tab Size <select id="setTS"><option>2</option><option>4</option></select></label>
+        <label><input type="checkbox" id="setWrap"> Word Wrap</label>
+      </div>
+      <div class="set-group"><div class="set-title">APP IDENTITY (for .ipa)</div>
+        <label>App Name<input type="text" id="setAppName" value="iOS Studio Extreme" style="width:100%"></label>
+        <label>Bundle ID<input type="text" id="setBundle" value="com.developer.iosstudioextreme" style="width:100%"></label>
+      </div>
+    </div>
+    <div style="padding:12px;text-align:right;border-top:1px solid #3c3c3c"><button class="btn primary" id="saveSettingsBtn">Save</button></div>
+  </div>
+</div>
+
+
+<div class="modal-overlay" id="pkgModal">
+  <div class="modal" style="max-width:500px">
+    <div class="modal-head"><h3>OTA Packager</h3><button class="modal-close" data-close="pkgModal">×</button></div>
+    <div style="padding:16px">
+      <label style="display:block;font-size:11px;color:var(--dim);margin-bottom:4px">App Name</label>
+      <input type="text" id="pkgAppName" style="width:100%;background:var(--input);border:1px solid var(--border);border-radius:4px;padding:6px 8px;color:var(--text);margin-bottom:12px">
+      <label style="display:block;font-size:11px;color:var(--dim);margin-bottom:4px">Bundle ID</label>
+      <input type="text" id="pkgBundle" style="width:100%;background:var(--input);border:1px solid var(--border);border-radius:4px;padding:6px 8px;color:var(--text);margin-bottom:12px">
+      <label style="display:block;font-size:11px;color:var(--dim);margin-bottom:4px">Version</label>
+      <input type="text" id="pkgVer" value="1.0.0" style="width:100%;background:var(--input);border:1px solid var(--border);border-radius:4px;padding:6px 8px;color:var(--text);margin-bottom:12px">
+      <label style="display:block;font-size:11px;color:var(--dim);margin-bottom:4px">Build</label>
+      <input type="number" id="pkgBuild" value="1" style="width:100%;background:var(--input);border:1px solid var(--border);border-radius:4px;padding:6px 8px;color:var(--text);margin-bottom:12px">
+      <div style="font-size:10px;text-transform:uppercase;color:var(--dim);margin-bottom:4px">Info.plist preview</div>
+      <pre id="pkgPreview" style="background:var(--bg);border:1px solid var(--border);border-radius:4px;padding:8px;font-size:11px;color:var(--text);white-space:pre-wrap;max-height:200px;overflow-y:auto"></pre>
+    </div>
+    <div style="padding:12px;text-align:right;border-top:1px solid var(--border)"><button class="btn primary" id="pkgSaveBtn">Save</button></div>
+  </div>
+</div>
+
+<div class="modal-overlay" id="inspModal">
+  <div class="modal" style="max-width:700px">
+    <div class="modal-head"><h3>Layout Inspector</h3><button class="modal-close" data-close="inspModal">×</button></div>
+    <div style="display:grid;grid-template-columns:1fr 1fr;max-height:60vh;overflow:hidden">
+      <div style="border-right:1px solid var(--border);padding:10px;overflow-y:auto;max-height:60vh">
+        <div style="font-size:10px;text-transform:uppercase;color:var(--dim);margin-bottom:8px">DOM Tree</div>
+        <ul id="inspectorTree" style="list-style:none;font-family:var(--mono);font-size:11px"></ul>
+      </div>
+      <div style="padding:10px;overflow-y:auto;max-height:60vh">
+        <div style="font-size:10px;text-transform:uppercase;color:var(--dim);margin-bottom:8px">Properties</div>
+        <div id="inspectorProps" style="font-family:var(--mono);font-size:11px"></div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="toast-stack" id="toasts"></div>
+<script src="app.js"></script>
+</body>
+</html>
