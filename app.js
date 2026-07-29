@@ -736,7 +736,6 @@ function init() {
 
 if (document.readyState==='loading') addEventListener('DOMContentLoaded',init);
 else init();
-})();
 
 /* ======================================================================
    v5.1 ENHANCEMENTS — GitHub Release download + App Icon picker
@@ -1141,3 +1140,4 @@ setTimeout(() => {
     };
   }
 }, 600);
+})();
