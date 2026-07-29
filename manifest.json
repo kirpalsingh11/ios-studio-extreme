@@ -1,0 +1,16 @@
+{
+  "name": "iOS Studio Extreme",
+  "short_name": "iOS Studio",
+  "display": "standalone",
+  "background_color": "#1e1e1e",
+  "theme_color": "#1e1e1e",
+  "orientation": "any",
+  "icons": [
+    {
+      "src": "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 512 512'%3E%3Crect width='512' height='512' rx='112' fill='%231e1e1e'/%3E%3Crect x='48' y='48' width='416' height='416' rx='96' fill='none' stroke='%23007acc' stroke-width='16'/%3E%3Cpath d='M160 176h192M160 256h128M160 336h192' stroke='%23007acc' stroke-width='24' stroke-linecap='round'/%3E%3C/svg%3E",
+      "sizes": "512x512",
+      "type": "image/svg+xml",
+      "purpose": "any maskable"
+    }
+  ]
+}
