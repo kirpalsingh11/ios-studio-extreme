@@ -24,6 +24,11 @@ jobs:
       - name: Install dependencies
         run: npm install --no-audit --no-fund
 
+      - name: Verify Capacitor installed
+        run: |
+          npx cap --version
+          npm ls @capacitor/core @capacitor/cli @capacitor/ios
+
       - name: Prepare www folder
         run: |
           mkdir -p www
@@ -35,16 +40,23 @@ jobs:
           ls -la www/
           test -f www/index.html || { echo "ERROR: index.html missing"; exit 1; }
 
-      - name: Add iOS platform and install pods
+      - name: Add iOS platform
+        run: npx cap add ios
+
+      - name: Verify iOS platform added
         run: |
-          npx cap add ios || true
+          test -d ios/App || { echo "ERROR: ios/App not created"; exit 1; }
+          test -f ios/App/App.xcworkspace || { echo "ERROR: workspace not created by cap add"; exit 1; }
+          echo "iOS platform ready"
+          ls -la ios/App/
+
+      - name: Sync and install pods
+        run: |
           npx cap copy ios
           npx cap sync ios
           cd ios/App
           pod install --repo-update
           cd ../..
-          test -f ios/App/App.xcworkspace || { echo "ERROR: workspace not created"; exit 1; }
-          echo "Workspace ready"
 
       - name: Set app icon
         run: |
