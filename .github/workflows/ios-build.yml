@@ -22,32 +22,27 @@ jobs:
           node-version: "24"
 
       - name: Install dependencies
-        run: |
-          npm install --no-audit --no-fund
-          npm ls @capacitor/core @capacitor/cli @capacitor/ios
+        run: npm install --no-audit --no-fund
 
       - name: Prepare www folder
         run: |
           mkdir -p www
           for f in index.html app.js styles.css manifest.json; do
-            if [ -f "$f" ]; then
-              cp "$f" "www/$f"
-            fi
+            if [ -f "$f" ]; then cp "$f" "www/$f"; fi
           done
           test -f www/index.html || { echo "ERROR: index.html missing"; exit 1; }
 
       - name: Add iOS platform
         run: npx cap add ios
 
-      - name: Create workspace if missing
+      - name: Install pods and verify workspace
         run: |
-          if [ ! -f ios/App/App.xcworkspace ]; then
-            echo "Workspace missing, generating with pod install"
-            cd ios/App
-            pod install
-            cd ../..
-          fi
-          test -f ios/App/App.xcworkspace || { echo "ERROR: still no workspace"; exit 1; }
+          cd ios/App
+          pod install --repo-update
+          cd ../..
+          # .xcworkspace is a DIRECTORY, not a file — use -d
+          test -d ios/App/App.xcworkspace || { echo "ERROR: workspace directory not found"; ls -la ios/App/; exit 1; }
+          echo "Workspace ready"
 
       - name: Sync
         run: |
